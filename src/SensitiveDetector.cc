@@ -30,11 +30,12 @@ G4bool SensitiveDetector::ProcessHits(G4Step *aStep, G4TouchableHistory *ROhist)
     G4StepPoint *preStepPoint = aStep->GetPreStepPoint();
     G4StepPoint* postStep = aStep->GetPostStepPoint();
     G4double fGlobalTime = preStepPoint->GetGlobalTime();
-
+    G4Track* track = aStep->GetTrack();
     G4StepStatus stepStatus = preStepPoint->GetStepStatus();
     const G4VProcess* process = postStep->GetProcessDefinedStep();
+    G4String procName = process->GetProcessName();
     G4String volName = aStep->GetPreStepPoint()->GetTouchableHandle()->GetVolume()->GetName(); 
-    G4Track* track = aStep->GetTrack();
+    
     G4int trackID = track->GetTrackID();
     G4int parentID = track->GetParentID();
     G4int pdgEncoding = track->GetDefinition()->GetPDGEncoding();
@@ -44,7 +45,6 @@ G4bool SensitiveDetector::ProcessHits(G4Step *aStep, G4TouchableHistory *ROhist)
     G4double fmomNeutron = momNeutron.mag();
     G4double fenergy = (1 * eV);
     G4int pdg = aStep->GetTrack()->GetDefinition()->GetPDGEncoding();
-    G4String procName = process->GetProcessName();
     auto secondaries = aStep->GetSecondaryInCurrentStep();
     G4double KE = preStepPoint->GetKineticEnergy();
     G4double KEev = KE / eV;
@@ -54,16 +54,19 @@ G4bool SensitiveDetector::ProcessHits(G4Step *aStep, G4TouchableHistory *ROhist)
     
     G4double energyDeposited = aStep->GetTotalEnergyDeposit();
 
-
-    if (energyDeposited > 0)
+    //Total Energy Deposited
+    /*if (energyDeposited > 0)
     {
         fTotalEnergyDeposited += energyDeposited;
     }
-
-   
+    */
+   //Recoil Energy deposits 
+   if (procName == "hadElastic") {
+   analysisManager->FillH2(0, fGlobalTime/ns, energyDeposited/keV);
+   }
     
 
-    return true;
+   return true;
 }
 
 void SensitiveDetector::EndOfEvent(G4HCofThisEvent *)

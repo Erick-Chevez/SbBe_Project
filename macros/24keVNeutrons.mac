@@ -1,0 +1,26 @@
+/run/initialize
+
+/control/verbose 0
+/tracking/verbose 0
+/event/verbose 0
+/gps/verbose 0
+# Use General Particle Source
+/gps/particle neutron
+
+# Mono energy
+/gps/ene/type Mono
+/gps/ene/mono 24 keV
+
+# Position distribution (point source at origin)
+/gps/pos/type Point
+/gps/pos/centre 0 0 -10 cm
+
+# Isotropic emission
+#/gps/ang/type iso
+
+# Beam emission
+/gps/direction 0 0 1
+
+
+# Generate events
+/run/beamOn 100000

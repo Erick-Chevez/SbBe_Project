@@ -82,5 +82,5 @@
 #/control/getEnv RUNNUM
 
 /analysis/setFileName debug
-/run/beamOn 1000
+/run/beamOn 10000000
 
