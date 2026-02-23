@@ -12,18 +12,13 @@ RunAction::RunAction()
     analysisManager->SetH1YAxisTitle(0, "Counts");
 
 
-    //1 Histo
-    analysisManager->CreateH1("PVT_Edep", "Energy deposit in PVT", 100, 0 * MeV, 10 * MeV); 
-    analysisManager->SetH1XAxisTitle(1, "MeV");
-    analysisManager->SetH1YAxisTitle(1, "Counts");
-
 
 
     //0 ntuple Gammas
     analysisManager->CreateNtuple("GammaEdep", "Gamma energy deposits in NaI");
-    analysisManager->CreateNtupleDColumn("Edep");
+    analysisManager->CreateNtupleDColumn("fGlobalTime");
     analysisManager->CreateNtupleIColumn("EventId");
-    analysisManager->FinishNtuple(3);
+    analysisManager->FinishNtuple(0);
 
    
 
@@ -37,9 +32,7 @@ void RunAction::BeginOfRunAction(const G4Run *run)
 {
     G4AnalysisManager *analysisManager = G4AnalysisManager::Instance();
 
-    if (IsMaster()) {
-    analysisManager->OpenFile("Recoil.root");  // Choose a fixed file name
-    }
+    
 
     
     G4int runID = run->GetRunID();

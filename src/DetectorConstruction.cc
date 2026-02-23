@@ -22,9 +22,9 @@ G4VPhysicalVolume *DetectorConstruction::Construct()
   //////////////////World Construction/////////////////////
   
   //Dimension Constants
-  G4double xWorld = 4. * m;
-  G4double yWorld = 4. * m;
-  G4double zWorld = 4. * m;
+  G4double xWorld = 1. * m;
+  G4double yWorld = 1. * m;
+  G4double zWorld = 1. * m;
   
   
   //World Material
@@ -40,7 +40,7 @@ G4VPhysicalVolume *DetectorConstruction::Construct()
   
   //Dimensions and Material Constants
   double inch = 2.54 * cm;
-  G4double env_sizeXY = 80 * inch, env_sizeZ = 80 * inch;
+  G4double env_sizeXY = 50 * cm, env_sizeZ = 50 * cm;
   G4Material* env_mat = nist->FindOrBuildMaterial("G4_AIR");
 
 
@@ -59,25 +59,31 @@ G4VPhysicalVolume *DetectorConstruction::Construct()
 
 
 
-  //////////////////PVT/////////////////////
+  //////////////////Xenon Cylinder/////////////////////
 
-  //PVT Constants
-  G4double px_PVT = 27 * inch;
-  G4double py_PVT = 26 * inch;
-  G4double pz_PVT = (1.14 ) * inch;
+  // Cylinder dimensions
+  G4double rIn_LXe  = 0.0*cm;          // solid fill (no hole)
+  G4double rOut_LXe = 1.5*cm;          // 3 cm inner diameter -> radius 1.5 cm
+  G4double h_LXe    = 1.5875*cm;       // height
+  G4double hz_LXe   = 0.5*h_LXe;
 
+  // LXe Material (80% Xe, 20% H)  ---- by MASS FRACTION
+  G4Element* elXe = new G4Element("Xenon",    "Xe", 54., 131.293*g/mole);
+  G4Element* elH  = new G4Element("Hydrogen", "H",   1.,   1.008*g/mole);
 
-  //PVT Material
-  G4Element* C = new G4Element("Carbon", "C", 6., 12.01*g/mole);
-  G4Element* H = new G4Element("Hydrogen", "H", 1., 1.008*g/mole);
-  G4Material* PVT = new G4Material("PVT", 1.023*g/cm3, 2);
-  PVT->AddElement(C, 9);
-  PVT->AddElement(H, 10);
+  // Pure liquid xenon is ~2.9 g/cm3 near boiling; mixture will differ.
+  G4double density_LXeMix = 2.9*g/cm3;
 
-  //Solid - Logic - Placement
-  G4Box* solidPVT = new G4Box("Box", px_PVT * 0.5, py_PVT * 0.5, pz_PVT * 0.5);
-  logicPVT = new G4LogicalVolume(solidPVT, PVT, "logicPVT");
-  G4VPhysicalVolume* PhysPVT = new G4PVPlacement(nullptr,G4ThreeVector(0 , 0, 0), logicPVT, "PVT", logicEnv, false, 0, checkOverlaps);
+  G4Material* LXe = new G4Material("LXe", density_LXeMix, 2);
+  LXe->AddElement(elXe, 0.80);   // 80% by mass
+  LXe->AddElement(elH,  0.20);   // 20% by mass
+
+  // Solid - Logic - Placement
+  G4Tubs* solidLXe = new G4Tubs("solidLXe", rIn_LXe, rOut_LXe, hz_LXe, 0.*deg, 360.*deg);
+  logicLXe = new G4LogicalVolume(solidLXe, LXe, "logicLXe");
+
+  // Place inside your environment volume 
+  G4VPhysicalVolume* physLXe = new G4PVPlacement(nullptr, G4ThreeVector(0,0,0), logicLXe, "LXe", logicEnv, false, 0, checkOverlaps);
   
 
 
@@ -101,7 +107,7 @@ G4VPhysicalVolume *DetectorConstruction::Construct()
 
 
   //PVT
-  logicPVT->SetVisAttributes(Yellow);
+  logicLXe->SetVisAttributes(Yellow);
 
   return physWorld;
 }
@@ -109,7 +115,7 @@ G4VPhysicalVolume *DetectorConstruction::Construct()
 void DetectorConstruction::ConstructSDandField()
 {
     SensitiveDetector *sensDet = new SensitiveDetector("SensitiveDetector");
-    logicPVT->SetSensitiveDetector(sensDet); //Black
+    logicLXe->SetSensitiveDetector(sensDet); //Black
     
     G4SDManager::GetSDMpointer()->AddNewDetector(sensDet);
 }

@@ -33,7 +33,7 @@ public:
 private:
     
 
-    G4LogicalVolume *logicPVT;
+    G4LogicalVolume *logicLXe;
     
     
     virtual void ConstructSDandField();

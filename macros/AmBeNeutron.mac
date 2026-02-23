@@ -12,7 +12,7 @@
 
 /gps/particle neutron
 
-#/gps/pos/centre -3.0 0.0 120.0 cm
+#/gps/pos/centre -3.0 0.0 50.0 cm
 /gps/pos/centre 0 -7.6 6.5 cm
 /gps/ang/type iso
 /gps/pos/type Point
@@ -82,5 +82,5 @@
 #/control/getEnv RUNNUM
 
 /analysis/setFileName debug
-/run/beamOn 1000000
+/run/beamOn 1000
 
