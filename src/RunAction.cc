@@ -12,7 +12,7 @@ RunAction::RunAction()
     analysisManager->SetH1YAxisTitle(0, "Counts");
 
     //0 Histo2D
-    analysisManager->CreateH2("EdepVsToF", "Energy Deposited vs Time of Flight", 10000, 0., 500, 10000, 0, 100) ; 
+    analysisManager->CreateH2("EdepVsToF", "Energy Deposited vs Time of Flight", 1000, 0., 10, 1000, -5 , 100) ; 
     analysisManager->SetH2XAxisTitle(0, "ToF(ns)");
     analysisManager->SetH2YAxisTitle(0, "Edep (keV)");
     

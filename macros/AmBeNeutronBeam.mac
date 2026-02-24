@@ -13,10 +13,10 @@
 /gps/particle neutron
 #/gps/particle geantino
 #/gps/pos/centre -3.0 0.0 120.0 cm
-/gps/pos/centre 0 0 6.5 cm
+/gps/pos/centre 0 0 -2 cm
 
 
-/gps/direction 0 0 -1
+/gps/direction 0 0 1
 #/gps/ang/type direction
 
 /gps/pos/type Point
@@ -86,5 +86,5 @@
 #/control/getEnv RUNNUM
 #/analysis/setFileName NeutronRoom_AmBeSource_dist{HEDIST}cm_orient{HEORIENT}
 /analysis/setFileName debug
-/run/beamOn 100
+/run/beamOn 1000000
 

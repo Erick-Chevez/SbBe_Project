@@ -55,14 +55,16 @@ G4bool SensitiveDetector::ProcessHits(G4Step *aStep, G4TouchableHistory *ROhist)
     G4double energyDeposited = aStep->GetTotalEnergyDeposit();
 
     //Total Energy Deposited
-    /*if (energyDeposited > 0)
+    if (energyDeposited > 0)
     {
         fTotalEnergyDeposited += energyDeposited;
     }
-    */
+    
    //Recoil Energy deposits 
    if (procName == "hadElastic") {
-   analysisManager->FillH2(0, fGlobalTime/ns, energyDeposited/keV);
+    if ( energyDeposited/keV > 1 ){
+    analysisManager->FillH2(0, fGlobalTime, energyDeposited/keV);
+    }
    }
     
 
@@ -78,9 +80,9 @@ void SensitiveDetector::EndOfEvent(G4HCofThisEvent *)
     analysisManager->FillNtupleIColumn(0, 1, eventID);
     analysisManager->AddNtupleRow(0);
     analysisManager->FillH1(0, fTotalEnergyDeposited);
-
-    G4cout << "Deposited energy: " << fTotalEnergyDeposited << G4endl;
-
+    //if (fTotalEnergyDeposited > 0){
+    //    G4cout << "Deposited energy: " << ns << G4endl;
+    //}
 
 
 }

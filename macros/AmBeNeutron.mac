@@ -13,7 +13,7 @@
 /gps/particle neutron
 
 #/gps/pos/centre -3.0 0.0 50.0 cm
-/gps/pos/centre 0 -7.6 6.5 cm
+/gps/pos/centre 0 5 0 cm
 /gps/ang/type iso
 /gps/pos/type Point
 #/gps/ang/mintheta 0 deg

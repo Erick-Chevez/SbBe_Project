@@ -66,21 +66,20 @@ G4VPhysicalVolume *DetectorConstruction::Construct()
   G4double rOut_LXe = 1.5*cm;          // 3 cm inner diameter -> radius 1.5 cm
   G4double h_LXe    = 1.5875*cm;       // height
   G4double hz_LXe   = 0.5*h_LXe;
+   // LXe Material (94% Xe, 6% H2)  ---- by mole FRACTION
+  G4Material* H2 = nist->FindOrBuildMaterial("G4_H");
+  G4Material* LXe = nist->FindOrBuildMaterial("G4_lXe");
 
-  // LXe Material (80% Xe, 20% H)  ---- by MASS FRACTION
-  G4Element* elXe = new G4Element("Xenon",    "Xe", 54., 131.293*g/mole);
-  G4Element* elH  = new G4Element("Hydrogen", "H",   1.,   1.008*g/mole);
-
-  // Pure liquid xenon is ~2.9 g/cm3 near boiling; mixture will differ.
-  G4double density_LXeMix = 2.9*g/cm3;
-
-  G4Material* LXe = new G4Material("LXe", density_LXeMix, 2);
-  LXe->AddElement(elXe, 0.80);   // 80% by mass
-  LXe->AddElement(elH,  0.20);   // 20% by mass
-
+  G4double wH2 = 9.79e-4;
+  G4double density = LXe->GetDensity();
+  G4Material* LXe_H2 = new G4Material("LXe_H2", density, 2);
+  LXe_H2->AddMaterial(LXe, 1- wH2);
+  LXe_H2->AddMaterial(H2,  wH2);
+ 
+ 
   // Solid - Logic - Placement
   G4Tubs* solidLXe = new G4Tubs("solidLXe", rIn_LXe, rOut_LXe, hz_LXe, 0.*deg, 360.*deg);
-  logicLXe = new G4LogicalVolume(solidLXe, LXe, "logicLXe");
+  logicLXe = new G4LogicalVolume(solidLXe, LXe_H2, "logicLXe");
 
   // Place inside your environment volume 
   G4VPhysicalVolume* physLXe = new G4PVPlacement(nullptr, G4ThreeVector(0,0,0), logicLXe, "LXe", logicEnv, false, 0, checkOverlaps);
