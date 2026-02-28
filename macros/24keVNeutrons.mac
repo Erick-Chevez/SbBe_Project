@@ -10,17 +10,17 @@
 # Mono energy
 /gps/ene/type Mono
 /gps/ene/mono 24 keV
-
+/gps/time 0 ns
 # Position distribution (point source at origin)
 /gps/pos/type Point
 /gps/pos/centre 0 0 -3 cm
 
 # Isotropic emission
-#/gps/ang/type iso
+/gps/ang/type iso
 
 # Beam emission
-/gps/direction 0 0 1
+#/gps/direction 0 0 1
 
 
 # Generate events
-/run/beamOn 1000000
+/run/beamOn 10000000

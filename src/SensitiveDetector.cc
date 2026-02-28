@@ -45,30 +45,50 @@ G4bool SensitiveDetector::ProcessHits(G4Step *aStep, G4TouchableHistory *ROhist)
     G4double fmomNeutron = momNeutron.mag();
     G4double fenergy = (1 * eV);
     G4int pdg = aStep->GetTrack()->GetDefinition()->GetPDGEncoding();
-    auto secondaries = aStep->GetSecondaryInCurrentStep();
+    
     G4double KE = preStepPoint->GetKineticEnergy();
     G4double KEev = KE / eV;
     G4String particleName = aStep->GetTrack()->GetDefinition()->GetParticleName();
-
+    auto secondaries = aStep->GetSecondaryInCurrentStep();
     
     
     G4double energyDeposited = aStep->GetTotalEnergyDeposit();
+    if (process->GetProcessName() == "hadElastic" &&
+        track->GetDefinition()->GetParticleName() == "neutron"){
+   
 
-    //Total Energy Deposited
-    if (energyDeposited > 0)
-    {
-        fTotalEnergyDeposited += energyDeposited;
+        int Z = -1;
+
+     const auto* hadProc = dynamic_cast<const G4HadronicProcess*>(process);
+    if (hadProc) {
+      const G4Nucleus* nuc = hadProc->GetTargetNucleus();
+      if (nuc) Z = nuc->GetZ_asInt();
     }
-    
+
+    // If Geant4 doesn't provide the target nucleus, fall back to Xe
+    if (Z < 0) Z = 54;
+
+    if (Z == 54){ 
+       
+        analysisManager->FillH2(0, fGlobalTime, energyDeposited/keV);
+    }
+    else if (Z == 1)   analysisManager->FillH2(1, fGlobalTime, energyDeposited/keV);
+    else             analysisManager->FillH2(0, fGlobalTime, energyDeposited/keV) ;
+  }
+    /*
    //Recoil Energy deposits 
-   if (procName == "hadElastic") {
-    if ( energyDeposited/keV > 1 ){
-    analysisManager->FillH2(0, fGlobalTime, energyDeposited/keV);
-    }
+    if (procName == "hadElastic") {
+        if ( energyDeposited/keV > 1 ){
+            analysisManager->FillH2(0, fGlobalTime, energyDeposited/keV);
+        }
    }
+    */
+     //Edep 
     
 
-   return true;
+     
+  
+    return true;
 }
 
 void SensitiveDetector::EndOfEvent(G4HCofThisEvent *)
@@ -79,10 +99,6 @@ void SensitiveDetector::EndOfEvent(G4HCofThisEvent *)
 
     analysisManager->FillNtupleIColumn(0, 1, eventID);
     analysisManager->AddNtupleRow(0);
-    analysisManager->FillH1(0, fTotalEnergyDeposited);
-    //if (fTotalEnergyDeposited > 0){
-    //    G4cout << "Deposited energy: " << ns << G4endl;
-    //}
 
 
 }

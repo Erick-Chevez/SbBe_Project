@@ -84,7 +84,8 @@ G4VPhysicalVolume *DetectorConstruction::Construct()
   // Place inside your environment volume 
   G4VPhysicalVolume* physLXe = new G4PVPlacement(nullptr, G4ThreeVector(0,0,0), logicLXe, "LXe", logicEnv, false, 0, checkOverlaps);
   
-
+  /////////////Reflector//////////////
+  
 
   ///////////////////Colors :>///////////////////// 
   G4VisAttributes* Magenta = new G4VisAttributes(G4Colour(1.0, 0.0, 1.0, 0.5)); //Magenta

@@ -6,18 +6,39 @@ RunAction::RunAction()
     analysisManager->SetNtupleMerging(true);
 
 
+
+    
+    ////////////////1D Histo//////////////
+
     //0 Histo1D
-    analysisManager->CreateH1("Edep", "Energy deposit", 100, 0., 6 * MeV) ; 
-    analysisManager->SetH1XAxisTitle(0, "MeV");
+    analysisManager->CreateH1("Edep", "Energy deposit", 100, 0., 30) ; 
+    analysisManager->SetH1XAxisTitle(0, "KeV");
     analysisManager->SetH1YAxisTitle(0, "Counts");
 
+    //1 histo1d
+    analysisManager->CreateH1("Edep-deltaKe", "Edep - KE", 1000, 0., 1) ; 
+    analysisManager->SetH1XAxisTitle(0, "Mev");
+    analysisManager->SetH1YAxisTitle(0, "Counts");
+
+
+
+
+    /////////////////2D Histo//////////////////////
     //0 Histo2D
-    analysisManager->CreateH2("EdepVsToF", "Energy Deposited vs Time of Flight", 1000, 0., 10, 1000, -5 , 100) ; 
+    analysisManager->CreateH2("EdepVsToFXenon", "Energy Deposited vs Time of Flight", 1000, 0., 100, 1000, 0 , 500) ; 
     analysisManager->SetH2XAxisTitle(0, "ToF(ns)");
     analysisManager->SetH2YAxisTitle(0, "Edep (keV)");
     
+    //1 Histo2D
+    analysisManager->CreateH2("EdepVsToFHydrogen", "Energy Deposited vs Time of Flight", 1000, 0., 100, 1000, 0 , 1200) ; 
+    analysisManager->SetH2XAxisTitle(0, "ToF(ns)");
+    analysisManager->SetH2YAxisTitle(0, "Edep (keV)");
 
 
+
+
+
+    ////////////nTuples//////////////
     //0 ntuple Gammas
     analysisManager->CreateNtuple("GammaEdep", "Gamma energy deposits in NaI");
     analysisManager->CreateNtupleDColumn("fGlobalTime");
