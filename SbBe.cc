@@ -2,6 +2,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <thread>
+#include <chrono>
 
 
 #include "G4RunManagerFactory.hh"
@@ -12,6 +13,7 @@
 #include "G4VisManager.hh"
 #include "G4UImanager.hh"
 #include "G4VisExecutive.hh"
+#include "Randomize.hh"
 
 #include "ProPhysicsList.hh"
 #include "DetectorConstruction.hh"
@@ -30,6 +32,11 @@ int main(int argc, char** argv)
   if (argc == 1) {
     ui = new G4UIExecutive(argc, argv);
   }
+
+  const auto seed = static_cast<long>(
+      std::chrono::high_resolution_clock::now().time_since_epoch().count());
+  G4Random::setTheSeed(seed);
+  G4cout << "RNG seed: " << seed << G4endl;
 
   auto runManager = G4RunManagerFactory::CreateRunManager(G4RunManagerType::Default);
   unsigned int requestedThreads = std::thread::hardware_concurrency();
@@ -77,7 +84,8 @@ int main(int argc, char** argv)
     G4String command = "/control/execute ";
     G4String fileName = argv[1];
     UImanager->ApplyCommand(command + fileName);
-    RunAction::MergeCompletedRunFiles();
+    // Manual merging is preferred; keep per-run ROOT files and avoid automatic hadd.
+    // RunAction::MergeCompletedRunFiles();
   }
   else {
     // interactive mode

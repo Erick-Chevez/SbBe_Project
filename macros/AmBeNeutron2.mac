@@ -96,7 +96,7 @@
 # /analysis/setFileName H_AmBe_50cm_Pb1p5_100M
 #/analysis/setFileName H_AmBe_50cm_Pb1p5_10M
 #/analysis/setFileName H_AmBe_50cm_30deg_Pb1p5_1M
-/analysis/setFileName H_AmBe_50cm_30deg_collPb_1B_3
+/analysis/setFileName H_AmBe_50cm_30deg_collPb_1B_4
 
 # Geant4's /run/beamOn argument is integer-limited, so split 10B into chunks.
 /run/beamOn 500000000

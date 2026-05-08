@@ -43,7 +43,7 @@ void PlotEdepVsToF_Zoom(const char* filename = "outputTof6MeV_AmBe.root",
   h->SetLineColor(kAzure + 2);
   h->Draw("SCAT");
 
-  TArrow* hArrow = new TArrow(250., 90., 130., 75., 0.02, "|>");
+  TArrow* hArrow = new TArrow(250., 90., 200., 75., 0.02, "|>");
   hArrow->SetLineColor(kRed + 2);
   hArrow->SetFillColor(kRed + 2);
   hArrow->SetLineWidth(2);
