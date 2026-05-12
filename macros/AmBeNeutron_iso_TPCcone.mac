@@ -1,4 +1,6 @@
-#changing the parameters in Macro
+# Direction-biased isotropic AmBe source.
+# Samples only the solid angle aimed at the LXe TPC, then scale absolute
+# isotropic yields by the cone fraction noted below.
 
 /SbBe/det/setEJ309Distance 50 cm
 /SbBe/det/setEJ309Angle 30 deg
@@ -10,15 +12,26 @@
 /event/verbose 0
 /gps/verbose 0
 
-# Realistic isotropic AmBe source placed at the current lead-shielded source position.
 /gps/particle neutron
 /gps/pos/type Point
 /gps/pos/centre -50 0 0 cm
+
+# Cone aimed along +x toward the TPC at the origin.
+# The default GPS isotropic theta=0 direction is -z, so this rotation maps
+# -z' onto +x. A 2 deg half-angle covers the 1.5 cm radius TPC at 50 cm
+# with a small allowance for the finite target length.
+# Cone solid-angle fraction of 4pi: (1 - cos(2 deg)) / 2 = 3.0458649e-4.
 /gps/ang/type iso
+/gps/ang/rot1 0 1 0
+/gps/ang/rot2 0 0 -1
+/gps/ang/mintheta 0 deg
+/gps/ang/maxtheta 2 deg
+/gps/ang/minphi 0 deg
+/gps/ang/maxphi 360 deg
 
 /gps/ene/type Arb
 /gps/hist/type arb
-# Data below from geant4 forum Zach Hartwig link:
+# Data below from Geant4 forum Zach Hartwig link:
 # http://hypernews.slac.stanford.edu/HyperNews/geant4/get/eventtrackmanage/1236.html?inline=-1
 #                E (MeV) Rel. Yield
 /gps/hist/point    0.11 0.905149
@@ -74,15 +87,5 @@
 /gps/hist/point    10.8 0.009837
 /gps/hist/inter Lin
 
-# Example naming pattern:
-# dopant_source_dist_lead_stats_mode
-# /analysis/setFileName H_AmBe_50cm_Pb1p5_100M_iso
-/analysis/setFileName H_AmBe_50cm_30deg_500M_iso_5
-#/analysis/setFileName test-iso
-# Geant4's /run/beamOn argument is a 32-bit integer, so 10B events
-# must be split across multiple runs. Total here remains 10,000,000,000.
-#/run/beamOn 200000000
-#/run/beamOn 200000000
-#/run/beamOn 200000000
-#/run/beamOn 200000000
-/run/beamOn 500000000
+/analysis/setFileName H_AmBe_50cm_30deg_TPCcone2deg
+/run/beamOn 100000000

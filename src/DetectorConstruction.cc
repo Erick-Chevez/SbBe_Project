@@ -6,6 +6,7 @@
 #include "G4Element.hh"
 #include "G4Box.hh"
 #include "G4Tubs.hh"
+#include "G4SubtractionSolid.hh"
 #include "G4LogicalVolume.hh"
 #include "G4GenericMessenger.hh"
 #include "G4PVPlacement.hh"
@@ -125,56 +126,73 @@ G4VPhysicalVolume *DetectorConstruction::Construct()
   G4VPhysicalVolume* physLXe =
       new G4PVPlacement(nullptr, G4ThreeVector(0, 0, 0), logicLXe, "LXe", logicEnv, false, 0, checkOverlaps);
 
-  ///////////////////Lead collimator around source/////////////////////
+  ///////////////////Lead shielding around source/////////////////////
 
   G4Material* leadMat = nist->FindOrBuildMaterial("G4_Pb");
+  G4Material* airMat = nist->FindOrBuildMaterial("G4_AIR");
 
   const G4ThreeVector sourcePosition(-50.0 * cm, 0., 0.);
-  const G4double leadThickness = 1.5 * cm;
-  const G4double sourceCavityHalfSize = 1.0 * cm;
-  const G4double sourceCavityHalfLength = 1.0 * cm;
+  const G4double leadBrickHalfX = 2.5 * cm;
+  const G4double leadBrickHalfY = 5.0 * cm;
+  const G4double leadBrickHalfZ = 4.0 * cm;
+  const G4double sourceHoleRadius = 0.6 * cm;
+  const G4double sourceHoleDepth = 3.0 * cm;
+  const G4double leadCoverThickness = 1.0 * cm;
+  const G4double leadCoverHalfY = 2.2 * cm;
+  const G4double leadCoverHalfZ = 2.6 * cm;
 
-  const G4double sideWallHalfX = sourceCavityHalfLength;
-  const G4double sideWallHalfYZ = sourceCavityHalfSize;
-  const G4double sideWallHalfThickness = 0.5 * leadThickness;
+  G4Box* solidLeadBrick = new G4Box("solidLeadBrick",
+                                    leadBrickHalfX,
+                                    leadBrickHalfY,
+                                    leadBrickHalfZ);
 
-  G4Box* solidLeadSide = new G4Box("solidLeadSide",
-                                   sideWallHalfX,
-                                   sideWallHalfThickness,
-                                   sideWallHalfYZ);
-  logicLead = new G4LogicalVolume(solidLeadSide, leadMat, "logicLead");
+  auto sourceHoleRot = new G4RotationMatrix();
+  sourceHoleRot->rotateY(90. * deg);
+
+  G4Tubs* solidSourceHole = new G4Tubs("solidSourceHole",
+                                       0.,
+                                       sourceHoleRadius,
+                                       0.5 * sourceHoleDepth,
+                                       0. * deg,
+                                       360. * deg);
+
+  // The source remains at sourcePosition. The hole enters from the +x face
+  // and reaches slightly past the source; a separate lead cover closes it.
+  G4SubtractionSolid* solidLeadBrickWithHole =
+      new G4SubtractionSolid("solidLeadBrickWithHole",
+                             solidLeadBrick,
+                             solidSourceHole,
+                             sourceHoleRot,
+                             G4ThreeVector(leadBrickHalfX - 0.5 * sourceHoleDepth, 0., 0.));
+
+  logicLead = new G4LogicalVolume(solidLeadBrickWithHole, leadMat, "logicLeadBrickWithHole");
 
   new G4PVPlacement(nullptr,
-                    sourcePosition + G4ThreeVector(0., sourceCavityHalfSize + sideWallHalfThickness, 0.),
-                    logicLead, "LeadTop", logicEnv, false, 0, checkOverlaps);
+                    sourcePosition,
+                    logicLead, "LeadBrickWithSourceHole", logicEnv, false, 0, checkOverlaps);
+
+  G4Tubs* solidSourceCavity = new G4Tubs("solidSourceCavity",
+                                         0.,
+                                         sourceHoleRadius,
+                                         0.5 * sourceHoleDepth,
+                                         0. * deg,
+                                         360. * deg);
+  G4LogicalVolume* logicSourceCavity =
+      new G4LogicalVolume(solidSourceCavity, airMat, "logicSourceCavity");
+
+  new G4PVPlacement(sourceHoleRot,
+                    sourcePosition + G4ThreeVector(leadBrickHalfX - 0.5 * sourceHoleDepth, 0., 0.),
+                    logicSourceCavity, "SourceAirHole", logicEnv, false, 0, checkOverlaps);
+
+  G4Box* solidLeadCover = new G4Box("solidLeadCover",
+                                    0.5 * leadCoverThickness,
+                                    leadCoverHalfY,
+                                    leadCoverHalfZ);
+  G4LogicalVolume* logicLeadCover = new G4LogicalVolume(solidLeadCover, leadMat, "logicLeadCover");
 
   new G4PVPlacement(nullptr,
-                    sourcePosition + G4ThreeVector(0., -(sourceCavityHalfSize + sideWallHalfThickness), 0.),
-                    logicLead, "LeadBottom", logicEnv, false, 1, checkOverlaps);
-
-  G4Box* solidLeadZWall = new G4Box("solidLeadZWall",
-                                    sideWallHalfX,
-                                    sideWallHalfYZ,
-                                    sideWallHalfThickness);
-  G4LogicalVolume* logicLeadZWall = new G4LogicalVolume(solidLeadZWall, leadMat, "logicLeadZWall");
-
-  new G4PVPlacement(nullptr,
-                    sourcePosition + G4ThreeVector(0., 0., sourceCavityHalfSize + sideWallHalfThickness),
-                    logicLeadZWall, "LeadPlusZ", logicEnv, false, 2, checkOverlaps);
-  new G4PVPlacement(nullptr,
-                    sourcePosition + G4ThreeVector(0., 0., -(sourceCavityHalfSize + sideWallHalfThickness)),
-                    logicLeadZWall, "LeadMinusZ", logicEnv, false, 3, checkOverlaps);
-
-  G4Box* solidLeadBack = new G4Box("solidLeadBack",
-                                   sideWallHalfThickness,
-                                   sourceCavityHalfSize + leadThickness,
-                                   sourceCavityHalfSize + leadThickness);
-  G4LogicalVolume* logicLeadBack = new G4LogicalVolume(solidLeadBack, leadMat, "logicLeadBack");
-
-  // Leave the +x face open so the source is collimated toward the TPC at the origin.
-  new G4PVPlacement(nullptr,
-                    sourcePosition + G4ThreeVector(-(sourceCavityHalfLength + sideWallHalfThickness), 0., 0.),
-                    logicLeadBack, "LeadBack", logicEnv, false, 4, checkOverlaps);
+                    sourcePosition + G4ThreeVector(leadBrickHalfX + 0.5 * leadCoverThickness, 0., 0.),
+                    logicLeadCover, "LeadSourceCover", logicEnv, false, 1, checkOverlaps);
 
   ///////////////////EJ309 cylinder/////////////////////
 
@@ -219,8 +237,7 @@ G4VPhysicalVolume *DetectorConstruction::Construct()
   logicLXe->SetVisAttributes(Yellow);
   logicReflect->SetVisAttributes(SlateBlue);
   logicLead->SetVisAttributes(LeadGray);
-  logicLeadZWall->SetVisAttributes(LeadGray);
-  logicLeadBack->SetVisAttributes(LeadGray);
+  logicLeadCover->SetVisAttributes(LeadGray);
 
   return physWorld;
 }
