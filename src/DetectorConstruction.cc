@@ -687,6 +687,6 @@ void DetectorConstruction::ConstructSDandField()
         sdManager->AddNewDetector(sensDet);
     }
 
-    //logicLXe->SetSensitiveDetector(sensDet);
+    logicLXe->SetSensitiveDetector(sensDet);
     logicReflect->SetSensitiveDetector(sensDet);
 }
