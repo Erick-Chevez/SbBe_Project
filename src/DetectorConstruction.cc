@@ -16,9 +16,10 @@
 #include "G4VisAttributes.hh"
 #include "G4Colour.hh"
 #include "G4SDManager.hh"
-
+#include "G4UnitsTable.hh"
 #include <cmath>
-
+#include "G4UnionSolid.hh"
+#include "G4Polycone.hh"
 DetectorConstruction::DetectorConstruction()
 {
   DefineCommands();
@@ -60,7 +61,7 @@ void DetectorConstruction::SetEJ309Angle(G4double value)
 
 G4VPhysicalVolume *DetectorConstruction::Construct()
 {
-  G4bool checkOverlaps = true;
+  G4bool checkOverlaps = false;
 
   G4NistManager *nist = G4NistManager::Instance();
 
@@ -91,6 +92,406 @@ G4VPhysicalVolume *DetectorConstruction::Construct()
   logicEnv->SetVisAttributes(EnvVisAtt);
 
   new G4PVPlacement(nullptr, G4ThreeVector(), logicEnv, "Envelope", logicWorld, false, 0, checkOverlaps);
+  /////////////cyrostat outer Shell//////////////////
+  // Stainless steel material
+  G4Material* stainlessSteel = nist->FindOrBuildMaterial("G4_STAINLESS-STEEL");
+  // Dimensions
+  G4double outerCanRadius = 22.9*cm;
+  G4double outerCanHeight = 47.0*cm;
+  G4double outerCanThickness = 2.11*mm;
+
+  // G4Tubs uses half-height
+  G4double outerCanHalfHeight = outerCanHeight/2.0;
+
+  // Inner cavity dimensions
+  G4double innerCanRadius = outerCanRadius - outerCanThickness;
+  G4double innerCanHalfHeight = outerCanHalfHeight - outerCanThickness;
+
+  // Outer solid cylinder
+  G4Tubs* outerCanSolid = new G4Tubs(
+    "OuterCanSolid",
+    0.0,
+    outerCanRadius,
+    outerCanHalfHeight,
+    0.0,
+    360.0*deg
+  );
+
+  // Inner cylinder to subtract
+  G4Tubs* innerCanSolid = new G4Tubs(
+    "InnerCanSolid",
+    0.0,
+    innerCanRadius,
+    innerCanHalfHeight,
+    0.0,
+    360.0*deg
+  );
+
+  // Subtract inner from outer to make hollow stainless-steel can
+  G4SubtractionSolid* outerCanShellSolid = new G4SubtractionSolid(
+    "OuterCanShellSolid",
+    outerCanSolid,
+    innerCanSolid,
+    nullptr,
+    G4ThreeVector(0.0, 0.0, 0.0)
+  );
+
+
+
+
+  G4LogicalVolume* logicCanShell = new G4LogicalVolume(
+    outerCanShellSolid,
+    stainlessSteel,
+    "OuterCanShellLogical"
+  );
+
+  G4RotationMatrix* rotY = new G4RotationMatrix();
+  rotY->rotateX(90.0*deg);
+  new G4PVPlacement(
+    rotY,
+    G4ThreeVector(0.0, outerCanHalfHeight - 5.4*cm/2, 0.0),
+    logicCanShell,
+    "OuterCanShellPhysical",
+    logicEnv,
+    false,
+    0,
+    true
+  );
+  /////////////////Cryostat Can/////////////////////
+  // Dimensions
+  G4double rIn_Vertical = 2.5*cm;
+  G4double rOut_Vertical = rIn_Vertical + 0.21*cm;
+  G4double h_Vertical = 25.0*cm * 0.5;
+
+  G4double rIn_Horizontal = 15.24*cm * 0.5;
+  G4double rOut_Horizontal = rIn_Horizontal + 0.21*cm;
+  G4double h_Horizontal = 12.0*cm * 0.5;
+
+
+  
+
+  // Cylinder 1: vertical cylinder along z-axis by default
+  G4Tubs* verticalCyl = new G4Tubs(
+    "VerticalCyl",
+    rIn_Vertical,
+    rOut_Vertical,
+    h_Vertical,
+    0.0,
+    360.0*deg
+  );
+
+  // Cylinder 2: horizontal cylinder.
+  // G4Tubs is naturally along z, so we rotate it to lie along x.
+  // Horizontal outer solid cylinder
+  G4Tubs* horizontalOuter = new G4Tubs(
+  "HorizontalOuter",
+  0.0,
+  rOut_Horizontal,
+  h_Horizontal,
+  0.0,
+  360.0*deg
+  );
+
+  // Inner cylinder to subtract
+  // Make it shorter so the end caps remain
+  G4double wallThickness = 0.21*cm;
+  G4double capThickness = wallThickness;
+
+  G4Tubs* horizontalInner = new G4Tubs(
+  "HorizontalInner",
+  0.0,
+  rIn_Horizontal,
+  h_Horizontal - capThickness,
+  0.0,
+  360.0*deg
+  );
+
+  // Subtract inner cylinder from outer cylinder
+  // This creates a hollow cylinder with closed caps
+  G4SubtractionSolid* horizontalClosedCyl = new G4SubtractionSolid(
+  "HorizontalClosedCyl",
+  horizontalOuter,
+  horizontalInner,
+  nullptr,
+  G4ThreeVector(0.0, 0.0, 0.0)
+  );
+
+
+  // Position horizontal cylinder near the top of the vertical one
+  G4ThreeVector horizontalPos(0.0,0.0, h_Vertical + h_Horizontal);
+  G4ThreeVector verticalPos(0.0, 0.0, 0 );
+  // Create union solid
+  G4UnionSolid* tShapeSolid = new G4UnionSolid(
+    "TShapeSolid",
+    verticalCyl,
+    horizontalClosedCyl,
+    nullptr,
+    horizontalPos
+  );
+
+  G4LogicalVolume* logicTshape = new G4LogicalVolume(
+    tShapeSolid,
+    stainlessSteel,
+    "TShapeLogical"
+  );
+
+  new G4PVPlacement(
+    nullptr,
+    G4ThreeVector(0,0.0 , -innerCanHalfHeight + h_Vertical ),  // position it halfway up the can
+    logicTshape,
+    "TShapePhysical",
+    logicCanShell,
+    false,
+    0,
+    checkOverlaps
+  );
+
+  //////////////////TPC ///////////////////////////////
+
+  ///////Dimensions//////
+  
+  //PCBs x 2 - Material: cirlex, outer radius : rIn_Vertical - wiggle room, inner radius: 0 cm, thickness : 0.2cm, 2 of them
+  //Spacer - cylinder, Material: PTFE, outer radius: temp ~3.0 diameter,inner radius: 0.5 diameter, thickness: 5.4cm 
+  //Shaping rings  x 7 - material: stainless steel, inner radius: 0.5 diameter, outer radius: rOut_PCB, thickness: 0.2cm
+
+  
+
+  // TPC cylindrical container
+  // Build TPC stack along z inside this container.
+  // Then rotate this whole container into y when placing it.
+
+  // Use air/vacuum/environment material
+  G4Material* containerMat = nist->FindOrBuildMaterial("G4_AIR");
+
+  //big enough to contain PCBs + spacer + rings
+  G4double tpcContainerRadius = 2.0*cm;
+  G4double tpcContainerHalfLength = 4.0*cm;  // full length = 8 cm
+
+  G4Tubs* solidTPCContainer = new G4Tubs(
+  "TPCContainerSolid",
+  0.0,
+  tpcContainerRadius,
+  tpcContainerHalfLength,
+  0.0,
+  360.0*deg
+  );
+
+  G4LogicalVolume* logicTPCContainer = new G4LogicalVolume(
+  solidTPCContainer,
+  containerMat,
+  "TPCContainerLogical"
+  );
+
+  // Make container invisible
+  logicTPCContainer->SetVisAttributes(G4VisAttributes::GetInvisible());
+
+
+
+  //////////////////// TPC Stack Geometry ////////////////////
+
+
+
+
+
+  // Materials
+  G4Material* cirlexMaterial = nist->FindOrBuildMaterial("G4_KAPTON"); // placeholder for Cirlex
+  G4Material* ptfeMaterial = nist->FindOrBuildMaterial("G4_TEFLON");
+  
+
+
+  //-----------------------------
+  //Shared dimensions
+  //-----------------------------
+  G4double wiggleRoom = 0.1*cm;
+
+  // PCBs
+  G4double pcbInnerRadius = 0.0*cm;
+  G4double pcbOuterRadius = rIn_Vertical - wiggleRoom;
+  G4double pcbThickness = 0.2*cm;
+  G4double pcbHalfThickness = pcbThickness/2.0;
+
+  // Spacer
+  G4double spacerOuterRadius = 2.0*cm ;   // 4.0 cm diameter
+  G4double spacerInnerRadius = 1.5*cm ;   // 3.0 cm diameter
+  G4double spacerHeight = 5.4*cm;
+  G4double spacerHalfHeight = spacerHeight/2.0;
+
+  // Shaping rings
+  G4int nShapingRings = 6;
+  G4double ringInnerRadius = spacerOuterRadius;     // 1.5 cm diameter
+  G4double ringOuterRadius = pcbOuterRadius;
+  G4double ringThickness = 0.2*cm;
+  G4double ringHalfThickness = ringThickness/2.0;
+
+  // Put spacer centered at z = 0
+  G4double zSpacerCenter = 0.0;
+
+  // PCB positions
+  G4double zTopPCB = spacerHalfHeight + pcbHalfThickness;
+  G4double zBottomPCB = -spacerHalfHeight - pcbHalfThickness;
+
+
+  // -----------------------------
+  // PCB solid and logical volume
+  // -----------------------------
+  G4Tubs* solidPCB = new G4Tubs(
+  "PCBSolid",
+  pcbInnerRadius,
+  pcbOuterRadius,
+  pcbHalfThickness,
+  0.0,
+  360.0*deg
+  );
+
+  G4LogicalVolume* logicPCB = new G4LogicalVolume(
+  solidPCB,
+  cirlexMaterial,
+  "PCBLogical"
+  );
+
+  // Bottom PCB
+  new G4PVPlacement(
+  nullptr,
+  G4ThreeVector(0.0, 0.0, zBottomPCB),
+  logicPCB,
+  "BottomPCBPhysical",
+  logicTPCContainer,
+  false,
+  0,
+  checkOverlaps
+  );
+
+  // Top PCB
+  new G4PVPlacement(
+  nullptr,
+  G4ThreeVector(0.0, 0.0, zTopPCB),
+  logicPCB,
+  "TopPCBPhysical",
+  logicTPCContainer,
+  false,
+  1,
+  checkOverlaps
+  );
+
+
+ 
+  // PTFE spacer cylinder
+  
+  G4Tubs* solidSpacer = new G4Tubs(
+  "PTFESpacerSolid",
+  spacerInnerRadius,
+  spacerOuterRadius,
+  spacerHalfHeight,
+  0.0,
+  360.0*deg
+  );
+
+  G4LogicalVolume* logicSpacer = new G4LogicalVolume(
+  solidSpacer,
+  ptfeMaterial,
+  "PTFESpacerLogical"
+  );
+
+  new G4PVPlacement(
+  nullptr,
+  G4ThreeVector(0.0, 0.0, zSpacerCenter),
+  logicSpacer,
+  "PTFESpacerPhysical",
+  logicTPCContainer,
+  false,
+  0,
+  checkOverlaps
+  );
+
+
+ 
+  // Triangular shaping ring
+  // using G4Polycone **didnt work :/, just looks like normal rings but i think thats okay
+
+  const G4int numZPlanes = 3;
+
+  G4double ringZPlanes[numZPlanes] = {
+  -ringHalfThickness,
+   0.0,
+   ringHalfThickness
+  };
+
+  G4double ringInnerRadii[numZPlanes] = {
+  ringInnerRadius,
+  ringInnerRadius,
+  ringInnerRadius
+  };
+
+  G4double ringOuterRadii[numZPlanes] = {
+  ringInnerRadius,
+  ringOuterRadius,
+  ringInnerRadius
+  };
+
+  G4Polycone* solidShapingRing = new G4Polycone(
+  "ShapingRingSolid",
+  0.0,
+  360.0*deg,
+  numZPlanes,
+  ringZPlanes,
+  ringInnerRadii,
+  ringOuterRadii
+  );
+
+  G4LogicalVolume* logicShapingRing = new G4LogicalVolume(
+  solidShapingRing,
+  stainlessSteel,
+  "ShapingRingLogical"
+  );
+
+  G4double ringSpacing = 0.3175*cm;  // distance between ring centers
+  G4double zFirstRing = -spacerHalfHeight + 1.6*cm; // starting position of first ring
+
+  // Place 7 shaping rings evenly inside spacer height
+  for (G4int i = 0; i < nShapingRings; i++) {
+
+    //G4double frac = (i + 1.0)/(nShapingRings + 1.0);
+    G4double zRing = zFirstRing + i*ringSpacing;
+
+    new G4PVPlacement(
+    nullptr,
+    G4ThreeVector(0.0, 0.0, zRing),
+    logicShapingRing,
+    "ShapingRingPhysical",
+    logicTPCContainer,
+    false,
+    i,
+    checkOverlaps
+    );
+  }
+  new G4PVPlacement(
+    nullptr,
+    G4ThreeVector(0.0, 0.0, spacerHalfHeight - 1.6*cm),
+    logicShapingRing,
+    "ShapingRingPhysical",
+    logicTPCContainer,
+    false,
+    7,
+    checkOverlaps
+    );
+
+
+  //PLace TPC container inside the cryostat can, rotated so TPC stack is along y
+  // Rotate container from z-axis to y-axis
+  G4RotationMatrix* rotTPCToY = new G4RotationMatrix();
+  rotTPCToY->rotateX(90.0*deg);
+
+  new G4PVPlacement(
+  rotTPCToY,
+  G4ThreeVector(0.0, -zBottomPCB +3*pcbHalfThickness - spacerHalfHeight, 0),  // final TPC position in logicEnv
+  logicTPCContainer,
+  "TPCContainerPhysical",
+  logicEnv,
+  false,
+  0,
+  checkOverlaps
+  );
+
 
   //////////////////Xenon Cylinder/////////////////////
 
@@ -124,7 +525,7 @@ G4VPhysicalVolume *DetectorConstruction::Construct()
   logicLXe = new G4LogicalVolume(solidLXe, dopedLXe, "logicLXe");
 
   G4VPhysicalVolume* physLXe =
-      new G4PVPlacement(nullptr, G4ThreeVector(0, 0, 0), logicLXe, "LXe", logicEnv, false, 0, checkOverlaps);
+      new G4PVPlacement(nullptr, G4ThreeVector(0, 0, 0), logicLXe, "LXe", logicTPCContainer, false, 0, checkOverlaps);
 
   ///////////////////Lead shielding around source/////////////////////
 
@@ -226,15 +627,48 @@ G4VPhysicalVolume *DetectorConstruction::Construct()
 
   ///////////////////Colors/////////////////////
 
-  G4VisAttributes* Yellow    = new G4VisAttributes(G4Colour(1.0, 1.0, 0.0, 0.5));
+  G4VisAttributes* Yellow    = new G4VisAttributes(G4Colour(1.0, 1.0, 0.0, 0.2));
   G4VisAttributes* SlateBlue = new G4VisAttributes(G4Colour(0.42, 0.35, 0.8, 0.75));
   G4VisAttributes* LeadGray  = new G4VisAttributes(G4Colour(0.35, 0.35, 0.35, 0.8));
-
+  G4VisAttributes* gray = new G4VisAttributes(G4Colour(0.5, 0.5, 0.5, 0.1));
+  G4VisAttributes* cyan = new G4VisAttributes(G4Colour(0.0, 1.0, 1.0, 0.25));
   Yellow->SetForceSolid(true);
+  Yellow->SetForceAuxEdgeVisible(true);
+  gray->SetForceWireframe(true);
+  gray->SetForceAuxEdgeVisible(true);
   SlateBlue->SetForceSolid(true);
   LeadGray->SetForceSolid(true);
+  Yellow->SetForceAuxEdgeVisible(true);
+  cyan->SetForceSolid(true);
+  
+  
+  
+  //Tshape + Can
+  logicTshape->SetVisAttributes(Yellow);
+  logicCanShell->SetVisAttributes(gray);
+  
+  //TPC parts
+  G4VisAttributes* pcbVis = new G4VisAttributes(G4Colour(0.6, 0.8, 1.0, 0.5));
+  pcbVis->SetForceSolid(true);
+  pcbVis->SetVisibility(true);
+  logicPCB->SetVisAttributes(pcbVis);
 
-  logicLXe->SetVisAttributes(Yellow);
+  G4VisAttributes* spacerVis = new G4VisAttributes(G4Colour(0.9, 0.9, 0.9, 0.25));
+  spacerVis->SetForceSolid(true);
+  spacerVis->SetForceAuxEdgeVisible(true);
+  spacerVis->SetVisibility(true);
+  logicSpacer->SetVisAttributes(spacerVis);
+
+  G4VisAttributes* ringVis = new G4VisAttributes(G4Colour(0.0, 0.0, 0.0));
+  ringVis->SetForceSolid(true);
+  ringVis->SetVisibility(true);
+  logicShapingRing->SetVisAttributes(ringVis);
+  //Xenon
+  logicLXe->SetVisAttributes(cyan);
+  
+  
+  
+  //Original
   logicReflect->SetVisAttributes(SlateBlue);
   logicLead->SetVisAttributes(LeadGray);
   logicLeadCover->SetVisAttributes(LeadGray);
@@ -253,6 +687,6 @@ void DetectorConstruction::ConstructSDandField()
         sdManager->AddNewDetector(sensDet);
     }
 
-    logicLXe->SetSensitiveDetector(sensDet);
+    //logicLXe->SetSensitiveDetector(sensDet);
     logicReflect->SetSensitiveDetector(sensDet);
 }
